@@ -1,0 +1,15 @@
+manifest_version: 2
+name: penny
+version: 0.1.0
+description: "Use your Penny core memory and private notes in Hermes."
+author: Helper Labs
+license: MIT
+homepage: https://mypenny.ai
+kind: exclusive
+requires_hermes: ">=0.21.6"
+platforms: [linux, macos]
+python_dependencies: []
+requires_env: []
+provides_tools: []
+provides_hooks: []
+tags: [memory, penny]
