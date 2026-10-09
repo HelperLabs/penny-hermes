@@ -486,6 +486,19 @@ class LoginTests(unittest.TestCase):
 
 
 class HttpTests(unittest.TestCase):
+    def test_oauth_requests_identify_plugin_for_server_admission(self):
+        for options in ({}, {"document": {"client_name": "Penny for Hermes"}}, {"form": {"grant_type": "refresh_token"}}):
+            with self.subTest(request_type=next(iter(options), "discovery")):
+                response = mock.MagicMock()
+                response.__enter__.return_value = response
+                response.read.return_value = b'{"ok":true}'
+                opener = mock.Mock()
+                opener.open.return_value = response
+                with mock.patch.object(penny_auth.request, "build_opener", return_value=opener):
+                    penny_auth._request_json(TOKEN_ENDPOINT, **options)
+                sent_request = opener.open.call_args.args[0]
+                self.assertEqual(sent_request.get_header("User-agent"), "penny-hermes/0.1.0")
+
     def test_http_error_is_redacted_and_redirects_are_disabled(self):
         opener = mock.Mock()
         body = io.BytesIO(b"raw secret response")

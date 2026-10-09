@@ -178,6 +178,51 @@ class ProviderTests(unittest.TestCase):
                 self.assertIn("error", value)
                 self.assertNotIn("result", value)
 
+    def test_remember_accepts_only_fresh_private_receipt_and_legacy_private_success(self):
+        self.initialize()
+        args = {"content": "Synthetic durable decision", "sample_questions": ["One?", "Two?", "Three?"], "confidence": 0.8}
+        memory_id = "synthetic-note-id"
+        for response in (
+            {"ok": [memory_id], "failed": []},
+            {"ok": [memory_id], "failed": [], "receipts": {}},
+            {"ok": [memory_id], "failed": [], "receipts": {memory_id: {"status": "saved", "memoryId": memory_id}}},
+        ):
+            with self.subTest(response=response):
+                self.client.call.return_value = response
+                self.assertEqual(self.result("penny_remember", args), {"result": response})
+
+    def test_remember_rejects_mismatched_shared_deduped_or_extended_receipts(self):
+        self.initialize()
+        args = {"content": "Synthetic durable decision", "sample_questions": ["One?", "Two?", "Three?"], "confidence": 0.8}
+        memory_id = "synthetic-note-id"
+        saved = {"status": "saved", "memoryId": memory_id}
+        bad_receipts = (
+            {"other-id": saved},
+            {memory_id: {**saved, "memoryId": "other-id"}},
+            {memory_id: {**saved, "status": "deduped"}},
+            {memory_id: {"status": "saved"}},
+            {memory_id: {"memoryId": memory_id}},
+            {memory_id: {**saved, "spaceId": "synthetic-space"}},
+            {memory_id: {**saved, "workspaceId": "synthetic-space"}},
+            {memory_id: {**saved, "scope": {"kind": "space"}}},
+            {memory_id: {**saved, "extra": True}},
+            {memory_id: saved, "other-id": saved},
+            {memory_id: None},
+            {memory_id: "saved"},
+            [],
+        )
+        bad_responses = [{"ok": [memory_id], "failed": [], "receipts": receipts} for receipts in bad_receipts]
+        bad_responses.extend(
+            {"ok": [memory_id], "failed": [], "receipts": {memory_id: saved}, field: value}
+            for field, value in (("spaceId", "synthetic-space"), ("workspaceId", None), ("scope", {"kind": "space"}), ("extra", True))
+        )
+        for response in bad_responses:
+            with self.subTest(response=response):
+                self.client.call.return_value = response
+                value = self.result("penny_remember", args)
+                self.assertIn("error", value)
+                self.assertNotIn("result", value)
+
     def test_bad_or_unknown_tool_arguments_never_reach_penny(self):
         self.initialize()
         valid_note = {"content": "Synthetic note", "sample_questions": ["One?", "Two?", "Three?"], "confidence": 0.5}
