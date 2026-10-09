@@ -107,7 +107,7 @@ PYTHONPATH=/path/to/hermes-agent python -m unittest discover -s tests -v
 hermes plugins validate /path/to/penny-hermes --install-deps
 ```
 
-Tests use synthetic responses and isolated temporary profiles. They never use
+Automated tests use synthetic responses and isolated temporary profiles. They never use
 your account, saved memories, or live OAuth credentials. See
 [VERIFICATION.md](VERIFICATION.md) for the checks performed for this release.
 

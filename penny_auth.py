@@ -57,7 +57,7 @@ def _request_json(
 ) -> dict[str, Any]:
     if form is not None and document is not None:
         raise AuthError("Invalid Penny authorization request.")
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "User-Agent": "penny-hermes/0.1.0"}
     body = None
     if form is not None:
         body = parse.urlencode(form).encode("ascii")

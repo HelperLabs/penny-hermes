@@ -43,6 +43,25 @@ def _private_notes(value, *, allow_unlabeled=False):
         or allow_unlabeled and "scope" not in item and not any(key in item for key in ("workspaceId", "author", "sharedVia")))]
 
 
+def _private_save_confirmed(value):
+    if (not isinstance(value, dict) or not set(value).issubset({"ok", "failed", "receipts"})
+        or not isinstance(value.get("ok"), list) or len(value["ok"]) != 1
+        or not isinstance(value["ok"][0], str) or not value["ok"][0].strip()
+        or value.get("failed") != []):
+        return False
+    receipts = value.get("receipts", {})
+    if not isinstance(receipts, dict):
+        return False
+    if not receipts:
+        return True  # Legacy private writes returned only the successful note ID.
+    memory_id = value["ok"][0]
+    if set(receipts) != {memory_id}:
+        return False
+    receipt = receipts[memory_id]
+    return (isinstance(receipt, dict) and set(receipt) == {"status", "memoryId"}
+        and receipt["status"] == "saved" and receipt["memoryId"] == memory_id)
+
+
 class PennyMemoryProvider(MemoryProvider):
     def __init__(self):
         self._home = Path(get_hermes_home())
@@ -274,9 +293,7 @@ class PennyMemoryProvider(MemoryProvider):
                 note = {"content": content, "tags": tags, "confidence": confidence,
                         "sampleQuestions": questions, "source": "hermes"}
                 value = client.call("penny_write", {"entityType": "note", "notes": [note]})
-                if (not isinstance(value, dict) or not isinstance(value.get("ok"), list)
-                    or len(value["ok"]) != 1 or not isinstance(value["ok"][0], str) or not value["ok"][0].strip()
-                    or value.get("failed") != [] or value.get("receipts", {}) != {}):
+                if not _private_save_confirmed(value):
                     return json.dumps({"error": "Penny did not confirm that the note was saved. Check your notes before retrying."})
             else:
                 return json.dumps({"error": "Unknown Penny tool."})
